@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>English Tamagotchi</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        #game-container {
+            width: 350px;
+            background: white;
+            border: 5px solid #333;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Экран с персонажем */
+        #screen {
+            height: 200px;
+            background: #e0f7fa;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #ccc;
+        }
+
+        #pet {
+            font-size: 80px;
+            transition: all 0.5s ease;
+        }
+
+        /* Анимации */
+        .bounce { transform: translateY(-20px); }
+        .shake { transform: translateX(10px); }
+
+        /* Кнопки действий */
+        .controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #4CAF50;
+            color: white;
+            transition: 0.3s;
+        }
+
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #ccc; }
+
+        .status {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="status">
+        <div>Hunger: <span id="hunger">0</span>%</div>
+        <div>Happy: <span id="happy">100</span>%</div>
+    </div>
+
+    <div id="screen">
+        <div id="action-text" style="position:absolute; top:10px; font-weight:bold; color:#555;">In the Living Room</div>
+        <div id="pet">🐱</div>
+    </div>
+
+    <div class="controls" id="buttons">
+        </div>
+</div>
+
+<script>
+    const pet = document.getElementById('pet');
+    const actionText = document.getElementById('action-text');
+    const buttonsContainer = document.getElementById('buttons');
+    
+    let state = {
+        hunger: 0,
+        happy: 100,
+        room: 'living_room'
+    };
+
+    // Настройки комнат и действий
+    const rooms = {
+        living_room: {
+            text: "You are in the Living Room",
+            actions: [
+                { label: "Watch TV 📺", effect: () => animatePet('bounce', 'I am watching TV!'), joy: 10 },
+                { label: "Read a book 📖", effect: () => animatePet('shake', 'I love reading!'), joy: 15 },
+                { label: "Go to Kitchen ➔", nextRoom: 'kitchen' }
+            ]
+        },
+        kitchen: {
+            text: "You are in the Kitchen",
+            actions: [
+                { label: "Eat an apple 🍎", effect: () => animatePet('bounce', 'Yummy! An apple!'), hunger: -20 },
+                { label: "Drink water 💧", effect: () => animatePet('shake', 'Refreshing!'), hunger: -5 },
+                { label: "Go to Living Room ➔", nextRoom: 'living_room' }
+            ]
+        }
+    };
+
+    function updateUI() {
+        document.getElementById('hunger').innerText = state.hunger;
+        document.getElementById('happy').innerText = state.happy;
+        
+        const currentRoom = rooms[state.room];
+        actionText.innerText = currentRoom.text;
+        
+        buttonsContainer.innerHTML = '';
+        currentRoom.actions.forEach(action => {
+            const btn = document.createElement('button');
+            btn.innerText = action.label;
+            btn.onclick = () => {
+                if(action.nextRoom) {
+                    state.room = action.nextRoom;
+                    updateUI();
+                } else {
+                    action.effect();
+                    if(action.joy) state.happy = Math.min(100, state.happy + action.joy);
+                    if(action.hunger) state.hunger = Math.max(0, state.hunger + action.hunger);
+                    updateUI();
+                }
+            };
+            buttonsContainer.appendChild(btn);
+        });
+    }
+
+    function animatePet(className, text) {
+        pet.classList.add(className);
+        const oldText = actionText.innerText;
+        actionText.innerText = text;
+        
+        setTimeout(() => {
+            pet.classList.remove(className);
+            actionText.innerText = oldText;
+        }, 1000);
+    }
+
+    // Инициализация
+    updateUI();
+
+    // Голод растет со временем
+    setInterval(() => {
+        state.hunger = Math.min(100, state.hunger + 1);
+        updateUI();
+        if(state.hunger > 70) pet.innerText = "😿";
+        else pet.innerText = "🐱";
+    }, 3000);
+
+</script>
+
+</body>
+</html>
