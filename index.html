@@ -1,178 +1,168 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>English Tamagotchi</title>
+    <title>English Learning Tamagotchi</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
+        :root {
+            --bg-living: #ffecb3;
+            --bg-kitchen: #c8e6c9;
+            --bg-bathroom: #bbdefb;
+        }
+        body { font-family: 'Arial', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #2c3e50; }
+        
+        #game-container { width: 380px; background: white; border: 6px solid #444; border-radius: 30px; padding: 20px; text-align: center; }
+        
+        /* Экран */
+        #screen { 
+            height: 250px; border-radius: 15px; position: relative; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: background 0.5s; border: 3px solid #ddd; overflow: hidden;
         }
 
-        #game-container {
-            width: 350px;
-            background: white;
-            border: 5px solid #333;
-            border-radius: 20px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        /* Персонаж и предметы */
+        #character-box { position: relative; font-size: 80px; z-index: 2; }
+        #item-overlay { 
+            position: absolute; font-size: 50px; bottom: 20px; right: 20px; 
+            opacity: 0; transition: 0.3s; z-index: 3;
         }
 
-        /* Экран с персонажем */
-        #screen {
-            height: 200px;
-            background: #e0f7fa;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-            border: 2px solid #ccc;
+        /* Статистика */
+        .stats { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; font-weight: bold; }
+        .stat-bar { background: #eee; border-radius: 5px; height: 10px; width: 60px; margin-top: 5px; overflow: hidden;}
+        .fill { height: 100%; width: 100%; transition: 0.3s; }
+
+        /* Кнопки */
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        button { 
+            padding: 12px 5px; border-radius: 10px; border: none; background: #3498db; color: white; 
+            font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 4px #2980b9;
         }
+        button:active { transform: translateY(2px); box-shadow: 0 2px #2980b9; }
+        button.move { background: #e67e22; box-shadow: 0 4px #d35400; }
 
-        #pet {
-            font-size: 80px;
-            transition: all 0.5s ease;
-        }
-
-        /* Анимации */
-        .bounce { transform: translateY(-20px); }
-        .shake { transform: translateX(10px); }
-
-        /* Кнопки действий */
-        .controls {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        button {
-            padding: 10px;
-            font-size: 14px;
-            cursor: pointer;
-            border: none;
-            border-radius: 8px;
-            background-color: #4CAF50;
-            color: white;
-            transition: 0.3s;
-        }
-
-        button:hover { background-color: #45a049; }
-        button:disabled { background-color: #ccc; }
-
-        .status {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 10px;
-            font-weight: bold;
+        .bubble {
+            position: absolute; top: 20px; background: white; padding: 5px 10px;
+            border-radius: 15px; border: 2px solid #333; font-size: 14px; display: none;
         }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div class="status">
-        <div>Hunger: <span id="hunger">0</span>%</div>
-        <div>Happy: <span id="happy">100</span>%</div>
+    <div class="stats">
+        <div>Hunger<div class="stat-bar"><div id="h-fill" class="fill" style="background: #e74c3c;"></div></div></div>
+        <div>Happiness<div class="stat-bar"><div id="ha-fill" class="fill" style="background: #2ecc71;"></div></div></div>
+        <div>Energy<div class="stat-bar"><div id="e-fill" class="fill" style="background: #f1c40f;"></div></div></div>
     </div>
 
-    <div id="screen">
-        <div id="action-text" style="position:absolute; top:10px; font-weight:bold; color:#555;">In the Living Room</div>
-        <div id="pet">🐱</div>
+    <div id="screen" style="background: var(--bg-living);">
+        <div id="speech-bubble" class="bubble">I'm bored...</div>
+        <div id="character-box">🐱</div>
+        <div id="item-overlay"></div>
+        <div id="room-name" style="position:absolute; bottom:5px; color:rgba(0,0,0,0.3); font-weight:bold;">LIVING ROOM</div>
     </div>
 
-    <div class="controls" id="buttons">
-        </div>
+    <div class="controls" id="btn-group"></div>
 </div>
 
 <script>
-    const pet = document.getElementById('pet');
-    const actionText = document.getElementById('action-text');
-    const buttonsContainer = document.getElementById('buttons');
-    
-    let state = {
-        hunger: 0,
-        happy: 100,
-        room: 'living_room'
-    };
+    let hunger = 20;
+    let happy = 80;
+    let energy = 100;
+    let currentRoom = 'living';
 
-    // Настройки комнат и действий
+    const foodList = ['🍎 an apple', '🍕 a pizza', '🍌 a banana', '🥦 broccoli', '🍰 a cake'];
+    
+    function updateBars() {
+        document.getElementById('h-fill').style.width = hunger + '%';
+        document.getElementById('ha-fill').style.width = happy + '%';
+        document.getElementById('e-fill').style.width = energy + '%';
+        
+        const pet = document.getElementById('character-box');
+        if (hunger > 70) pet.innerText = '😿';
+        else if (happy < 30) pet.innerText = '🙀';
+        else if (energy < 20) pet.innerText = '😴';
+        else pet.innerText = '🐱';
+    }
+
+    function showAction(emoji, text) {
+        const item = document.getElementById('item-overlay');
+        const bubble = document.getElementById('speech-bubble');
+        const pet = document.getElementById('character-box');
+
+        item.innerText = emoji;
+        item.style.opacity = '1';
+        bubble.innerText = text;
+        bubble.style.display = 'block';
+        pet.style.transform = 'scale(1.2)';
+
+        setTimeout(() => {
+            item.style.opacity = '0';
+            bubble.style.display = 'none';
+            pet.style.transform = 'scale(1)';
+        }, 2000);
+    }
+
     const rooms = {
-        living_room: {
-            text: "You are in the Living Room",
+        living: {
+            color: 'var(--bg-living)',
+            name: 'LIVING ROOM',
             actions: [
-                { label: "Watch TV 📺", effect: () => animatePet('bounce', 'I am watching TV!'), joy: 10 },
-                { label: "Read a book 📖", effect: () => animatePet('shake', 'I love reading!'), joy: 15 },
-                { label: "Go to Kitchen ➔", nextRoom: 'kitchen' }
+                { text: "Watch TV 📺", run: () => { happy += 20; energy -= 10; showAction('📺', 'I like this show!'); } },
+                { text: "Read a book 📖", run: () => { happy += 15; showAction('📖', 'Great story!'); } },
+                { text: "Go to Kitchen ➔", move: 'kitchen' }
             ]
         },
         kitchen: {
-            text: "You are in the Kitchen",
+            color: 'var(--bg-kitchen)',
+            name: 'KITCHEN',
             actions: [
-                { label: "Eat an apple 🍎", effect: () => animatePet('bounce', 'Yummy! An apple!'), hunger: -20 },
-                { label: "Drink water 💧", effect: () => animatePet('shake', 'Refreshing!'), hunger: -5 },
-                { label: "Go to Living Room ➔", nextRoom: 'living_room' }
+                { text: "Eat food 🍴", run: () => { 
+                    const food = foodList[Math.floor(Math.random() * foodList.length)];
+                    hunger = Math.max(0, hunger - 30);
+                    showAction(food.split(' ')[1], "I am eating " + food); 
+                }},
+                { text: "Drink water 💧", run: () => { hunger = Math.max(0, hunger - 5); showAction('💧', 'Fresh!'); } },
+                { text: "Go to Living Room ➔", move: 'living' }
             ]
         }
     };
 
-    function updateUI() {
-        document.getElementById('hunger').innerText = state.hunger;
-        document.getElementById('happy').innerText = state.happy;
+    function renderRoom(roomKey) {
+        currentRoom = roomKey;
+        const room = rooms[roomKey];
+        const screen = document.getElementById('screen');
+        const btnGroup = document.getElementById('btn-group');
         
-        const currentRoom = rooms[state.room];
-        actionText.innerText = currentRoom.text;
-        
-        buttonsContainer.innerHTML = '';
-        currentRoom.actions.forEach(action => {
-            const btn = document.createElement('button');
-            btn.innerText = action.label;
-            btn.onclick = () => {
-                if(action.nextRoom) {
-                    state.room = action.nextRoom;
-                    updateUI();
-                } else {
-                    action.effect();
-                    if(action.joy) state.happy = Math.min(100, state.happy + action.joy);
-                    if(action.hunger) state.hunger = Math.max(0, state.hunger + action.hunger);
-                    updateUI();
+        screen.style.background = room.color;
+        document.getElementById('room-name').innerText = room.name;
+        btnGroup.innerHTML = '';
+
+        room.actions.forEach(act => {
+            const b = document.createElement('button');
+            b.innerText = act.text;
+            if (act.move) b.className = 'move';
+            b.onclick = () => {
+                if (act.move) renderRoom(act.move);
+                else {
+                    act.run();
+                    updateBars();
                 }
             };
-            buttonsContainer.appendChild(btn);
+            btnGroup.appendChild(b);
         });
     }
 
-    function animatePet(className, text) {
-        pet.classList.add(className);
-        const oldText = actionText.innerText;
-        actionText.innerText = text;
-        
-        setTimeout(() => {
-            pet.classList.remove(className);
-            actionText.innerText = oldText;
-        }, 1000);
-    }
-
-    // Инициализация
-    updateUI();
-
-    // Голод растет со временем
+    // Таймеры: голод и скука растут
     setInterval(() => {
-        state.hunger = Math.min(100, state.hunger + 1);
-        updateUI();
-        if(state.hunger > 70) pet.innerText = "😿";
-        else pet.innerText = "🐱";
-    }, 3000);
+        hunger = Math.min(100, hunger + 2);
+        happy = Math.max(0, happy - 1);
+        updateBars();
+    }, 4000);
 
+    renderRoom('living');
+    updateBars();
 </script>
 
 </body>
