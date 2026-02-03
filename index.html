@@ -2,167 +2,196 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>English Learning Tamagotchi</title>
+    <title>English Adventure Tamagotchi</title>
     <style>
-        :root {
-            --bg-living: #ffecb3;
-            --bg-kitchen: #c8e6c9;
-            --bg-bathroom: #bbdefb;
-        }
-        body { font-family: 'Arial', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #2c3e50; }
-        
-        #game-container { width: 380px; background: white; border: 6px solid #444; border-radius: 30px; padding: 20px; text-align: center; }
-        
-        /* Экран */
-        #screen { 
-            height: 250px; border-radius: 15px; position: relative; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: background 0.5s; border: 3px solid #ddd; overflow: hidden;
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #2c3e50;
+            font-family: 'Comic Sans MS', cursive;
         }
 
-        /* Персонаж и предметы */
-        #character-box { position: relative; font-size: 80px; z-index: 2; }
-        #item-overlay { 
-            position: absolute; font-size: 50px; bottom: 20px; right: 20px; 
-            opacity: 0; transition: 0.3s; z-index: 3;
+        #game-window {
+            width: 450px;
+            height: 600px;
+            background: white;
+            border: 10px solid #f39c12;
+            border-radius: 40px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 0 #d35400;
         }
 
-        /* Статистика */
-        .stats { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; font-weight: bold; }
-        .stat-bar { background: #eee; border-radius: 5px; height: 10px; width: 60px; margin-top: 5px; overflow: hidden;}
-        .fill { height: 100%; width: 100%; transition: 0.3s; }
+        /* Динамический фон комнат */
+        #room {
+            height: 70%;
+            transition: 0.5s;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 40px;
+        }
+
+        .living_room { background: #ffeb3b; background-image: radial-gradient(#fbc02d 20%, transparent 20%); background-size: 30px 30px; }
+        .kitchen { background: #81c784; background-image: linear-gradient(90deg, #66bb6a 50%, transparent 50%); background-size: 40px 40px; }
+        .bathroom { background: #4fc3f7; }
+
+        /* Персонаж */
+        #character-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: 0.3s;
+        }
+
+        #head { font-size: 80px; z-index: 2; position: relative; }
+        #body { 
+            width: 60px; height: 50px; background: #FF9800; 
+            border-radius: 20px 20px 10px 10px; margin-top: -20px;
+            border: 3px solid #333;
+        }
+
+        /* Анимация ходьбы */
+        @keyframes walk {
+            0% { transform: rotate(-5deg) translateY(0); }
+            50% { transform: rotate(5deg) translateY(-10px); }
+            100% { transform: rotate(-5deg) translateY(0); }
+        }
+        .walking { animation: walk 0.3s infinite; }
 
         /* Кнопки */
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        button { 
-            padding: 12px 5px; border-radius: 10px; border: none; background: #3498db; color: white; 
-            font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 4px #2980b9;
+        #ui {
+            height: 30%;
+            background: #ecf0f1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 15px;
+            border-top: 5px solid #bdc3c7;
         }
-        button:active { transform: translateY(2px); box-shadow: 0 2px #2980b9; }
-        button.move { background: #e67e22; box-shadow: 0 4px #d35400; }
 
-        .bubble {
-            position: absolute; top: 20px; background: white; padding: 5px 10px;
-            border-radius: 15px; border: 2px solid #333; font-size: 14px; display: none;
+        button {
+            border: none;
+            border-radius: 15px;
+            background: #3498db;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px #2980b9;
+        }
+
+        button:active { transform: translateY(3px); box-shadow: 0 2px #2980b9; }
+        button.nav { background: #e67e22; box-shadow: 0 5px #d35400; }
+
+        .stat-cloud {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.8);
+            padding: 10px; border-radius: 15px; font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div class="stats">
-        <div>Hunger<div class="stat-bar"><div id="h-fill" class="fill" style="background: #e74c3c;"></div></div></div>
-        <div>Happiness<div class="stat-bar"><div id="ha-fill" class="fill" style="background: #2ecc71;"></div></div></div>
-        <div>Energy<div class="stat-bar"><div id="e-fill" class="fill" style="background: #f1c40f;"></div></div></div>
+<div id="game-window">
+    <div class="stat-cloud">
+        Hunger: <span id="h-val">0</span>% | Happy: <span id="ha-val">100</span>%
     </div>
 
-    <div id="screen" style="background: var(--bg-living);">
-        <div id="speech-bubble" class="bubble">I'm bored...</div>
-        <div id="character-box">🐱</div>
-        <div id="item-overlay"></div>
-        <div id="room-name" style="position:absolute; bottom:5px; color:rgba(0,0,0,0.3); font-weight:bold;">LIVING ROOM</div>
+    <div id="room" class="living_room">
+        <div id="room-label" style="position:absolute; top: 60px; font-size: 24px; color: #333; opacity: 0.5;">LIVING ROOM</div>
+        
+        <div id="character-container">
+            <div id="head">🐱</div>
+            <div id="body"></div>
+        </div>
     </div>
 
-    <div class="controls" id="btn-group"></div>
+    <div id="ui">
+        </div>
 </div>
 
 <script>
-    let hunger = 20;
-    let happy = 80;
-    let energy = 100;
-    let currentRoom = 'living';
+    const character = document.getElementById('character-container');
+    const roomDiv = document.getElementById('room');
+    const roomLabel = document.getElementById('room-label');
+    const ui = document.getElementById('ui');
 
-    const foodList = ['🍎 an apple', '🍕 a pizza', '🍌 a banana', '🥦 broccoli', '🍰 a cake'];
-    
-    function updateBars() {
-        document.getElementById('h-fill').style.width = hunger + '%';
-        document.getElementById('ha-fill').style.width = happy + '%';
-        document.getElementById('e-fill').style.width = energy + '%';
-        
-        const pet = document.getElementById('character-box');
-        if (hunger > 70) pet.innerText = '😿';
-        else if (happy < 30) pet.innerText = '🙀';
-        else if (energy < 20) pet.innerText = '😴';
-        else pet.innerText = '🐱';
-    }
+    let stats = { hunger: 10, happy: 90 };
 
-    function showAction(emoji, text) {
-        const item = document.getElementById('item-overlay');
-        const bubble = document.getElementById('speech-bubble');
-        const pet = document.getElementById('character-box');
-
-        item.innerText = emoji;
-        item.style.opacity = '1';
-        bubble.innerText = text;
-        bubble.style.display = 'block';
-        pet.style.transform = 'scale(1.2)';
-
-        setTimeout(() => {
-            item.style.opacity = '0';
-            bubble.style.display = 'none';
-            pet.style.transform = 'scale(1)';
-        }, 2000);
-    }
-
-    const rooms = {
-        living: {
-            color: 'var(--bg-living)',
-            name: 'LIVING ROOM',
+    const config = {
+        living_room: {
+            name: "LIVING ROOM",
+            class: "living_room",
             actions: [
-                { text: "Watch TV 📺", run: () => { happy += 20; energy -= 10; showAction('📺', 'I like this show!'); } },
-                { text: "Read a book 📖", run: () => { happy += 15; showAction('📖', 'Great story!'); } },
-                { text: "Go to Kitchen ➔", move: 'kitchen' }
+                { text: "Watch TV 📺", func: () => playAction("Watching TV...") },
+                { text: "Read a Book 📖", func: () => playAction("Reading...") },
+                { text: "Go to Kitchen ➔", move: "kitchen" }
             ]
         },
         kitchen: {
-            color: 'var(--bg-kitchen)',
-            name: 'KITCHEN',
+            name: "KITCHEN",
+            class: "kitchen",
             actions: [
-                { text: "Eat food 🍴", run: () => { 
-                    const food = foodList[Math.floor(Math.random() * foodList.length)];
-                    hunger = Math.max(0, hunger - 30);
-                    showAction(food.split(' ')[1], "I am eating " + food); 
-                }},
-                { text: "Drink water 💧", run: () => { hunger = Math.max(0, hunger - 5); showAction('💧', 'Fresh!'); } },
-                { text: "Go to Living Room ➔", move: 'living' }
+                { text: "Eat Apple 🍎", func: () => playAction("Yummy!") },
+                { text: "Drink Milk 🥛", func: () => playAction("Slurp!") },
+                { text: "Go to Bathroom ➔", move: "bathroom" },
+                { text: "Go to Living Room ➔", move: "living_room" }
+            ]
+        },
+        bathroom: {
+            name: "BATHROOM",
+            class: "bathroom",
+            actions: [
+                { text: "Wash Hands 🧼", func: () => playAction("Splish Splash!") },
+                { text: "Brush Teeth 🪥", func: () => playAction("Scrub scrub!") },
+                { text: "Go to Kitchen ➔", move: "kitchen" }
             ]
         }
     };
 
-    function renderRoom(roomKey) {
-        currentRoom = roomKey;
-        const room = rooms[roomKey];
-        const screen = document.getElementById('screen');
-        const btnGroup = document.getElementById('btn-group');
-        
-        screen.style.background = room.color;
-        document.getElementById('room-name').innerText = room.name;
-        btnGroup.innerHTML = '';
+    function playAction(msg) {
+        character.classList.add('walking');
+        setTimeout(() => character.classList.remove('walking'), 1000);
+        // Здесь можно добавить всплывающий текст
+    }
 
-        room.actions.forEach(act => {
+    function changeRoom(key) {
+        const data = config[key];
+        
+        // Анимация перехода: "уходим" за экран
+        character.style.transform = "translateX(300px)";
+        
+        setTimeout(() => {
+            roomDiv.className = data.class;
+            roomLabel.innerText = data.name;
+            character.style.transform = "translateX(-300px)";
+            
+            setTimeout(() => {
+                character.style.transform = "translateX(0)";
+                renderUI(key);
+            }, 50);
+        }, 300;
+    }
+
+    function renderUI(roomKey) {
+        ui.innerHTML = '';
+        config[roomKey].actions.forEach(act => {
             const b = document.createElement('button');
             b.innerText = act.text;
-            if (act.move) b.className = 'move';
-            b.onclick = () => {
-                if (act.move) renderRoom(act.move);
-                else {
-                    act.run();
-                    updateBars();
-                }
-            };
-            btnGroup.appendChild(b);
+            if(act.move) b.className = 'nav';
+            b.onclick = () => act.move ? changeRoom(act.move) : act.func();
+            ui.appendChild(b);
         });
     }
 
-    // Таймеры: голод и скука растут
-    setInterval(() => {
-        hunger = Math.min(100, hunger + 2);
-        happy = Math.max(0, happy - 1);
-        updateBars();
-    }, 4000);
-
-    renderRoom('living');
-    updateBars();
+    // Старт
+    renderUI('living_room');
 </script>
 
 </body>
